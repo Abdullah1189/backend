@@ -4,6 +4,11 @@ import stripePackage from 'stripe';
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
 import { readFile } from 'fs/promises';
+import fs from 'fs';
+
+// Read and parse the JSON file
+const serviceAccount = JSON.parse(fs.readFileSync('./config/serviceAccount.json', 'utf8'));
+
 
 // Import Firebase client SDK (for auth and Firestore)
 import { initializeApp } from "firebase/app";
@@ -16,8 +21,6 @@ dotenv.config();
 // Initialize Stripe
 const stripe = stripePackage(process.env.REACT_APP_STRIPE_SECRET_KEY);
 
-// Load Firebase Admin SDK credentials - More robust error handling
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT.replace(/\\n/g, '\n'));
 
 
 // Initialize Firebase Admin SDK
@@ -46,7 +49,7 @@ const app = express();
 
 // **Crucial CORS Configuration:**
 app.use(cors({
-    origin: ["http://localhost:5173", "https://your-frontend.vercel.app"], // Allow frontend domains
+    origin: [process.env.FRONTEND_URL || "http://localhost:5173"],
     methods: "GET, POST, OPTIONS",
     allowedHeaders: "Content-Type, Authorization",
     credentials: true
@@ -77,17 +80,19 @@ app.post('/create-payment', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Missing or invalid required fields' });
         }
 
-        // Create Stripe Payment Intent - Add idempotency key
-        const idempotencyKey = req.header('Idempotency-Key'); // Get from client-side request
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(finalPrice * 100),
-            currency: 'usd',
-            payment_method: paymentMethodId,
-            confirm: true,
-            metadata: { userId, shopName: appointmentData.shopName },
-            // Important: Use an idempotency key to prevent duplicate charges
-            idempotency_key: idempotencyKey,
-        });
+       const paymentIntent = await stripe.paymentIntents.create(
+    {
+        amount: Math.round(finalPrice * 100),
+        currency: 'usd',
+        payment_method: paymentMethodId,
+        confirm: true,
+        metadata: { userId, shopName: appointmentData.shopName },
+    },
+    {
+        idempotencyKey: idempotencyKey || `payment-${userId}-${Date.now()}`, // Fallback idempotency key
+    }
+);
+
 
         if (paymentIntent.status !== 'succeeded') {
             console.error("Stripe Payment Error:", paymentIntent.last_payment_error); // Log detailed error
@@ -135,5 +140,3 @@ app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
 
-// Export Firebase Client SDK for frontend usage
-export { firebaseApp, auth, db };
