@@ -1,23 +1,15 @@
 import express from 'express';
-import cors from 'cors';
-const bodyParser = require("body-parser");
-const Stripe = require("stripe");
-
+import Stripe from 'stripe';
 import dotenv from 'dotenv';
 
-
-// Load environment variables
 dotenv.config();
 
-// Initialize Stripe
 const stripe = Stripe(process.env.REACT_APP_STRIPE_SECRET_KEY);
-
 const app = express();
-app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json()); // Built-in body parser
 
-// Handle payment confirmation
-app.post("/create-payment", async (req, res) => {
+// Payment API route (Vercel requires /api/)
+app.post("/api/create-payment", async (req, res) => {
     try {
         const { paymentMethodId, finalPrice } = req.body;
 
@@ -26,7 +18,7 @@ app.post("/create-payment", async (req, res) => {
             amount: Math.round(finalPrice * 100), // Convert dollars to cents
             currency: "usd",
             payment_method: paymentMethodId,
-            confirm: true, // Automatically confirm the payment
+            confirm: true, // Auto-confirm payment
         });
 
         if (paymentIntent.status === "succeeded") {
@@ -40,5 +32,5 @@ app.post("/create-payment", async (req, res) => {
     }
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Export the Express app for Vercel
+export default app;
