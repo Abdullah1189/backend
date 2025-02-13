@@ -1,39 +1,16 @@
-import express from 'express';
-import Stripe from 'stripe';
-import dotenv from 'dotenv';
-import cors from 'cors'; // ✅ Use `import` instead of `require`
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
 
 dotenv.config();
-
 const app = express();
+
 app.use(cors());
-app.use(express.json()); // Built-in body parser
+app.use(express.json());
 
-const stripe = new Stripe(process.env.REACT_APP_STRIPE_SECRET_KEY);
-
-// Payment API route (Vercel requires /api/)
-app.post("/api/create-payment", async (req, res) => {
-    try {
-        const { paymentMethodId, finalPrice } = req.body;
-
-        // Create a PaymentIntent
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(finalPrice * 100), // Convert dollars to cents
-            currency: "usd",
-            payment_method: paymentMethodId,
-            confirm: true, // Auto-confirm payment
-        });
-
-        if (paymentIntent.status === "succeeded") {
-            return res.json({ success: true, paymentIntentId: paymentIntent.id });
-        } else {
-            return res.json({ success: false, error: "Payment processing failed" });
-        }
-    } catch (error) {
-        console.error("Error processing payment:", error);
-        return res.status(500).json({ success: false, error: error.message });
-    }
+app.get("/", (req, res) => {
+  res.send("Backend is running!");
 });
 
-// Export the Express app for Vercel
+// Export the app correctly
 export default app;
