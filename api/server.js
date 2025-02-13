@@ -1,12 +1,15 @@
 import express from 'express';
 import Stripe from 'stripe';
 import dotenv from 'dotenv';
+import cors from 'cors'; // ✅ Use `import` instead of `require`
 
 dotenv.config();
 
-const stripe = Stripe(process.env.REACT_APP_STRIPE_SECRET_KEY);
 const app = express();
+app.use(cors());
 app.use(express.json()); // Built-in body parser
+
+const stripe = new Stripe(process.env.REACT_APP_STRIPE_SECRET_KEY);
 
 // Payment API route (Vercel requires /api/)
 app.post("/api/create-payment", async (req, res) => {
